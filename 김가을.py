@@ -1,0 +1,73 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
+# 데이터 불러오기
+df = pd.read_csv("C:\\Users\\gaeul kim\\fall\\GoodReads_100k_books.csv")  
+
+# 필요한 컬럼만 선택
+revised_df  = df[['genre', 'rating', 'reviews']]
+
+# 결측치 처리
+revised_df = revised_df.dropna(subset=['genre'])
+
+# 범주형 타입으로 변환
+revised_df['genre'] = revised_df['genre'].astype('category')
+
+# 인덱스 재설정
+revised_df = revised_df.reset_index(drop=True)
+
+#첫번째 분석 
+high_rating_books = revised_df[revised_df['rating'] >= 4.5]
+
+# 평점이 4.5이상인 책 중 상위 15개의 장르 분석
+genre_counts = high_rating_books['genre'].value_counts().head(15)
+
+# 가로 막대그래프 그리기
+plt.figure(figsize=(10,7))
+plt.barh(genre_counts.index[::-1], genre_counts.values[::-1], color='orange')  
+plt.xlabel('Number of Books')
+plt.title('Top 15 Genres for Books with Rating >= 4.5')
+plt.show()
+
+#두번째 분석
+# 쉼표로 구분된 다중 장르 분리
+revised_df['genre'] = revised_df['genre'].str.split(',') 
+revised_df = revised_df.explode('genre')                  
+revised_df['genre'] = revised_df['genre'].str.strip()  
+
+#장르별 총 리뷰 수 상위 15개
+genre_reviews = revised_df.groupby('genre')['reviews'].sum().sort_values(ascending=False).head(15)
+
+plt.figure(figsize=(10,7))
+plt.barh(genre_reviews.index[::-1], genre_reviews.values[::-1], color='skyblue')
+plt.xlabel('Total Number of Reviews')
+plt.title('Top 15 Genres by Total Number of Reviews')
+plt.tight_layout()
+plt.show()
+
+#세번째 분석
+#로그 스케일을 위해 리뷰 수가 0보다 큰 데이터만 사용
+filtered_df = revised_df[revised_df['reviews'] > 0]
+filtered_df['log_reviews'] = np.log10(filtered_df['reviews'])
+
+#샘플링: 3000개 무작위 추출
+sample_df = filtered_df.sample(n=3000, random_state=42)
+
+#산점도 시각화
+plt.figure(figsize=(12, 6))
+plt.scatter(
+    sample_df['log_reviews'],
+    sample_df['rating'],
+    s=30,          
+    alpha=0.3,    
+    c='teal'
+)
+
+plt.title("Number of Reviews(log10) vs Rating", fontsize=16)
+plt.xlabel("Number of Reviews(log10)", fontsize=12)
+plt.ylabel("Rating", fontsize=12)
+plt.ylim(2.0, 5.0) #그래프 세로축이 다르게 설정되어서 따로 지정했습니다
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.tight_layout()
+plt.show()
